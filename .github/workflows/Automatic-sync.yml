@@ -28,18 +28,35 @@ jobs:
         run: |
           git merge upstream/main || true
 
-      - name: Check for workflow changes
-        id: check
+      - name: Revert workflow file changes
         run: |
-          if git diff --name-only HEAD~1 | grep '^.github/workflows/'; then
-            echo "Workflow files changed. Skipping push."
-            echo "skip_push=true" >> $GITHUB_OUTPUT
-          else
-            echo "No workflow changes. Proceeding to push."
-            echo "skip_push=false" >> $GITHUB_OUTPUT
-          fi
+          # 恢复 workflows 目录为 merge 前状态（保留本地版本）
+          git restore --staged .github/workflows || true
+          git restore .github/workflows || true
 
-      - name: Push changes
-        if: steps.check.outputs.skip_push == 'false'
+          # 若你不需要保留 workflows，可直接清空它：
+          # rm -rf .github/workflows
+          # git add -u .github/workflows
+
+          git status  # 查看剩余变更
+
+      - name: Commit and push (excluding workflows)
         run: |
+          git commit -am "sync: update from upstream (excluding workflows)" || echo "No changes to commit"
           git push origin main
+          
+      # - name: Check for workflow changes
+      #   id: check
+      #   run: |
+      #     if git diff --name-only HEAD~1 | grep '^.github/workflows/'; then
+      #       echo "Workflow files changed. Skipping push."
+      #       echo "skip_push=true" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "No workflow changes. Proceeding to push."
+      #       echo "skip_push=false" >> $GITHUB_OUTPUT
+      #     fi
+
+      # - name: Push changes
+      #   if: steps.check.outputs.skip_push == 'false'
+      #   run: |
+      #     git push origin main
